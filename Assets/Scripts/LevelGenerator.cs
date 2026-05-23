@@ -6,19 +6,21 @@ public class LevelGenerator : MonoBehaviour
     [Header("Chunks")]
     [SerializeField] private GameObject[] chunkPrefabs;
     [SerializeField] private int chunkPoolSize = 3;
+    [SerializeField] private GameObject startingChunkPrefab; // <-- assign in Inspector
 
     [Header("Streaming")]
     [SerializeField] private float spawnAhead = 80f;
     [SerializeField] private float recycleBehind = 20f;
 
     private Chunk[] _prefabTemplates;
+    private Chunk _startingChunkTemplate;
     private readonly Dictionary<Chunk, ObjectPool<Chunk>> _pools = new();
     private readonly Dictionary<Chunk, Chunk> _instanceToPrefab = new();
     private readonly List<Chunk> _activeChunks = new();
     private readonly List<Chunk> _candidateBuffer = new();
 
     private float _spawnZ;
-    private LaneMask _currentExit = LaneMask.All; // first chunk has no upstream constraint
+    private LaneMask _currentExit = LaneMask.All;
 
     void Awake()
     {
@@ -29,31 +31,52 @@ public class LevelGenerator : MonoBehaviour
             _prefabTemplates[i] = template;
             _pools[template] = new ObjectPool<Chunk>(template, transform, chunkPoolSize);
         }
+
+        if (startingChunkPrefab != null)
+        {
+            _startingChunkTemplate = startingChunkPrefab.GetComponent<Chunk>();
+            // Give it its own pool if it isn't already in chunkPrefabs.
+            if (!_pools.ContainsKey(_startingChunkTemplate))
+                _pools[_startingChunkTemplate] = new ObjectPool<Chunk>(_startingChunkTemplate, transform, 1);
+        }
     }
 
     void Start()
     {
+        if (_startingChunkTemplate != null)
+            SpawnSpecificChunk(_startingChunkTemplate);
+
         while (_spawnZ < spawnAhead) SpawnNextChunk();
     }
 
     void Update()
     {
-        // Treadmill: slide every active chunk backward by speed * dt.
         float scroll = GameManager.Instance.ScrollSpeed * Time.deltaTime;
         for (int i = 0; i < _activeChunks.Count; i++)
             _activeChunks[i].transform.position += Vector3.back * scroll;
         _spawnZ -= scroll;
 
-        // Spawn ahead until we've filled the visible distance.
         while (_spawnZ < spawnAhead) SpawnNextChunk();
 
-        // Recycle anything that has fallen far behind the camera.
         for (int i = _activeChunks.Count - 1; i >= 0; i--)
         {
             Chunk c = _activeChunks[i];
             if (c.transform.position.z + c.Length * 0.5f < -recycleBehind)
                 Recycle(i);
         }
+    }
+
+    private void SpawnSpecificChunk(Chunk prefab)
+    {
+        Chunk chunk = _pools[prefab].Get(transform);
+        chunk.transform.SetPositionAndRotation(
+            new Vector3(0f, 0f, _spawnZ + chunk.Length * 0.5f),
+            Quaternion.identity);
+
+        _activeChunks.Add(chunk);
+        _instanceToPrefab[chunk] = prefab;
+        _spawnZ += chunk.Length;
+        _currentExit = chunk.Exit;
     }
 
     private void SpawnNextChunk()
@@ -77,7 +100,6 @@ public class LevelGenerator : MonoBehaviour
         _currentExit = chunk.Exit;
     }
 
-    // Socket matching: keep prefabs whose Entry shares at least one open lane with requiredOpen.
     private Chunk PickNextChunk(LaneMask requiredOpen)
     {
         _candidateBuffer.Clear();

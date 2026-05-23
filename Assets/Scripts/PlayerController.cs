@@ -19,7 +19,6 @@ public class PlayerController : MonoBehaviour
 
     void Awake()
     {
-        // We drive position directly, so any rigidbody on this object must be kinematic.
         if (TryGetComponent(out Rigidbody rb))
         {
             rb.isKinematic = true;
@@ -53,5 +52,18 @@ public class PlayerController : MonoBehaviour
         pos.y = _y;
         pos.z = 0f;
         transform.position = pos;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Obstacle"))
+            Death();
+    }
+
+    private void Death()
+    {
+        ScoreManager.Instance.StopCounting();
+        Destroy(gameObject);
+        Time.timeScale = 0f;
     }
 }

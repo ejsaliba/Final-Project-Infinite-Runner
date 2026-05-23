@@ -16,6 +16,12 @@ public class GameManager : MonoBehaviour
         ScrollSpeed = config.startSpeed;
     }
 
+    void Start()
+    {
+        ScoreManager.Instance.ResetScore();
+        ScoreManager.Instance.StartCounting();
+    }
+
     void Update()
     {
         ScrollSpeed = Mathf.Min(ScrollSpeed + config.speedIncreaseRate * Time.deltaTime, config.maxSpeed);
