@@ -12,6 +12,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float jumpVelocity = 8f;
     [SerializeField] private float gravity = -25f;
 
+     [Header("References")]
+    [SerializeField] private GameOverScreen gameOverScreen;
+
     private int _laneIndex;
     private float _y;
     private float _yVel;
@@ -60,9 +63,10 @@ public class PlayerController : MonoBehaviour
             Death();
     }
 
-    private void Death()
+     private void Death()
     {
         ScoreManager.Instance.StopCounting();
+        gameOverScreen.ShowGameOver();
         Destroy(gameObject);
         Time.timeScale = 0f;
     }

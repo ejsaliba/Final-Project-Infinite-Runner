@@ -79,8 +79,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Chunk
   length: 10
-  entry: 5
-  exit: 5
+  entry: 2
+  exit: 2
 --- !u!1 &7803714594687051042
 GameObject:
   m_ObjectHideFlags: 0
